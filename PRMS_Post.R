@@ -40,7 +40,7 @@ for(j in 1:nM) {
   QMOD_PP <- QMOD
   
   # Compute B-C transfomration of the model data
-  Z_mod <- ((QMOD + coeff[1]^Lambda - 1)) / Lambda
+  Z_mod <- ((QMOD + coeff[j])^Lambda - 1) / Lambda
   
   # Compute Current Precip Index (CPI) for Model j
   Beta <- Beta_Array[j] # j'th Beta Parameter
