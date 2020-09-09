@@ -1,6 +1,8 @@
 % Matlab script to serve as a template for post-processing routines
 % applied to modeled streamflow outputs from PRMS for SFPUC reservoirs
 % r. walters, sfpuc, june 2020
+% modified sept 2020 to include new parameters and to fix a subsetting
+% error pointed out by D. Park (UMass)
 
 % % % specify evaluation period (serial dates, daily timestep)
 EP = datenum(1971,10,1) : datenum(2015,9,30);
@@ -32,7 +34,7 @@ T = DT(idx);                            % subset data array to evaluation period
 %                   ...
 %             2015 9 30 0 0 0]          % [N x 6], columns correspond to year, month, day, hour, minute, second, respectively
 DV = datevec(T);                        % matlab date vector, as described above
- 
+
 % extract the month number from the array DV
 allMonths = DV(:,2);                    % [N x 1], column vector containing numeric month for all timesteps in T
 
@@ -45,8 +47,15 @@ tmax = dat.tmax;                        % max daily air temp
 tmin = dat.tmin;                        % min daily air temp
 tavg = (tmax + tmin)./2;                % average daily air temp for each station
 tIndex = nanmean(tavg,2);               % index air temperature, daily average of all stations [N x 1]
+
+% % % calculate precipitation index as a 9-station average
 pcpIndex = nanmean(prcp,2);             % index precip, daily average of all stations [N x 1]
 [~, cInds] = intersect(dt, T);          % indices corresponding to the evaluation period, EP
+
+% % % calculate a 15-day trailing sum of tIndex, TSS
+% e.g., TSS_i = (TSS_i-14 + TSS_i-13 ... TSS_i-1 + TSS_i)
+TSS = movsum(tIndex, [14 0]);           % 15-point trailing moving sum (movsum is a canned matlab function)
+TSS = TSS(cInds);                       % temporal subset to align with the evaluation period
 
 % * note that pcpIndex is not subset to the 'cInds' indices until cpi is
 % calculated in the outer-most for loop below
@@ -56,34 +65,30 @@ pcpIndex = nanmean(prcp,2);             % index precip, daily average of all sta
 % % % --------- BEGIN CALCULATION ROUTINES --------------------------------
 
 
-% % % calculate a 15-day trailing sum of tIndex, TSS
-% e.g., TSS_i = (TSS_i-14 + TSS_i-13 ... TSS_i-1 + TSS_i)
-TSS = movsum(tIndex, [14 0]);           % 15-point trailing moving sum (movsum is a canned matlab function)
-
 % % % load fitting parameters for polynomial adjustment function
 %     each column represents parameters p1-p4 for each of 3 temporal bins
 %     column one:   Nov-Feb
 %     column two:   Mar-Jun
 %     column three: Jul-Oct
-P_HH = [   -0.0031    0.0023   -0.0127      % Hetch Hetchy
-           -0.0122   -0.0025    0.0094      
-            2.4722   -0.7188    8.9121
-            3.7852    1.0779   -9.6569  ];  
+P_HH = [   -0.0030    0.0015   -0.0117      % Hetch Hetchy
+           -0.0111   -0.0026    0.0089
+            2.2693   -0.4268    8.0218
+            3.1163    1.1621   -9.0786  ];  
         
-P_CH = [   -0.0006   -0.0007   -0.0026      % Cherry
+P_CH = [   -0.0005   -0.0007   -0.0026      % Cherry/Eleanor
            -0.0099    0.0070    0.0263
-            0.5472    0.5265    2.4669
-            2.9746   -5.9535  -25.6689  ];
+            0.5428    0.5297    2.4555
+            2.9601   -5.9907  -25.6277  ];
         
-P_DP = [   -0.0022   -0.0006    0.0005      % Don Pedro
-            0.0204    0.0217    0.0158
-            1.3324    0.6075   -0.4515
-           -16.3090 -18.6052  -12.5753  ];
+P_DP = [   -0.0022   -0.0006    0.0007      % Don Pedro
+            0.0210    0.0218    0.0146
+            1.3605    0.6124   -0.6634
+           -16.5851  -18.6785  -11.3565  ];
        
-P_LAG = [  -0.0010   -0.0004   -0.0031      % La Grange
-            0.0008    0.0088    0.0332
-            0.8516    0.4349    2.7864
-           -7.0699   -9.0777  -31.4835  ];
+P_LAG = [  -0.0010   -0.0004   -0.0030      % La Grange
+            0.0010    0.0088    0.0326
+            0.8564    0.4330    2.6828
+           -7.1662   -9.0619  -30.8760  ];
        
 % % % concatenate the fitting parameters into a single data cube of size [4 x 3 x 4]
 P_ALL = cat(3, P_HH, P_CH, P_DP, P_LAG);    
@@ -94,7 +99,7 @@ PMonths = [ 11     3     7                  % monthly bins for paramter fits
             2      6    10  ];
 
 % % % specify CPI Beta Values for each model (HH, CH, DP, LaG)
-Beta_Array = [0.91  0.99  0.99  0.99];      % Beta values for CPI computation
+Beta_Array = [0.93  0.99  0.99  0.99];      % Beta values for CPI computation
 
 % % % Specify coefficients for Box-Cox model data transformation
 c       = [10.3219    6.7181    9.8626   26.0570];  
@@ -145,4 +150,3 @@ for j = 1 : nM                              % iteration for each model (nM=4)
     QMOD_All_PP(:, j) = QMOD_PP;
     
 end
-     
