@@ -32,7 +32,7 @@ T = DT(idx);                            % subset data array to evaluation period
 %                   ...
 %             2015 9 30 0 0 0]          % [N x 6], columns correspond to year, month, day, hour, minute, second, respectively
 DV = datevec(T);                        % matlab date vector, as described above
-
+ 
 % extract the month number from the array DV
 allMonths = DV(:,2);                    % [N x 1], column vector containing numeric month for all timesteps in T
 
