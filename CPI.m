@@ -5,8 +5,6 @@ function [c_i, dt] = CPI(Precip, beta, time)
 % using duration curves of a precipitation index. Hydrological Processes
 % 14: 1083-1100.
 % r. walters, sfpuc, june 2020
-% EDITED sept 2020 to fix an index error
-%   --> Precip(t-1) should be Precip(t) [catchment precip for current day]
 %
 % INPUT:
 %       Precip: instantaneous precipitation time series vector
